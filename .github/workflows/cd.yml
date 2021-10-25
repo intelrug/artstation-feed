@@ -1,0 +1,106 @@
+name: cd
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  cd:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node: [14]
+
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@master
+        with:
+          ref: 'master'
+
+      - name: Setup node env 🏗
+        uses: actions/setup-node@v2.1.5
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+
+      - name: Get yarn cache directory path 🛠
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - name: Cache node_modules 📦
+        uses: actions/cache@v2.1.4
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies 👨🏻‍💻
+        run: yarn --frozen-lockfile
+
+      - name: Run linter 👀
+        run: yarn lint
+
+      - name: Build project
+        run: yarn build
+
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: |
+            dist
+            .env
+            .env.development
+            .env.production
+            .env.test
+            .eslintignore
+            .eslintrc.js
+            deploy.sh
+            ecosystem.config.js
+            environment.js
+            jest.config.js
+            ormconfig.js
+            package.json
+            tsconfig.build.json
+            tsconfig.eslint.json
+            tsconfig.json
+            yarn.lock
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/staging.key
+          chmod 600 ~/.ssh/staging.key
+          cat >>~/.ssh/config <<END
+          Host staging
+            HostName $SSH_HOST
+            Port $SSH_PORT
+            User $SSH_USER
+            IdentityFile ~/.ssh/staging.key
+            StrictHostKeyChecking no
+            SendEnv APP_DIR
+          END
+        env:
+          SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          SSH_PORT: ${{ secrets.STAGING_SSH_PORT }}
+          APP_DIR: ${{ secrets.STAGING_APP_DIR }}
+
+      - name: Copy dist files
+        run: |
+          ssh staging 'mkdir -p $APP_DIR/artifacts'
+          scp -r dist staging:$APP_DIR/artifacts/dist
+          scp -r .env deploy.sh ecosystem.config.js environment.js ormconfig.js package.json tsconfig.build.json tsconfig.json yarn.lock staging:$APP_DIR/artifacts
+        env:
+          APP_DIR: ${{ secrets.STAGING_APP_DIR }}
+
+      - name: Run deploy script
+        run: ssh staging 'source ~/.nvm/nvm.sh && cd $APP_DIR && bash deploy.sh'
+        env:
+          APP_DIR: ${{ secrets.STAGING_APP_DIR }}

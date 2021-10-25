@@ -1,0 +1,83 @@
+{
+  "name": "@intelrug/artstation-rss",
+  "version": "1.0.0",
+  "description": "ArtStation RSS",
+  "private": true,
+  "license": "MIT",
+  "repository": "git@github.com:intelrug/artstation-rss.git",
+  "author": {
+    "name": "Svyatoslav Fyodorov",
+    "email": "intelrug@gmail.com",
+    "url": "https://github.com/intelrug"
+  },
+  "keywords": [
+    "artstation",
+    "rss",
+    "telegram",
+    "bot"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "start:prod": "cross-env NODE_ENV=production node -r ./environment.js dist/main.js",
+    "start:dev": "cross-env NODE_ENV=development nest start --watch --exec \"node -r ./environment.js -r ts-node/register -r tsconfig-paths/register ./src/main.ts\"",
+    "start:debug": "npm run start:dev -- --debug",
+    "prebuild": "npm run clean",
+    "build": "tsc --project tsconfig.build.json && tscpaths -p tsconfig.build.json -s ./src -o ./dist",
+    "lint": "eslint .",
+    "format": "eslint . --fix",
+    "typeorm": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register -r ./environment.js ./node_modules/typeorm/cli.js",
+    "typeorm:prod": "cross-env NODE_ENV=production node -r ./environment.js ./node_modules/typeorm/cli.js",
+    "typeorm:test": "cross-env NODE_ENV=test ts-node -r tsconfig-paths/register -r ./environment.js ./node_modules/typeorm/cli.js",
+    "module": "node scripts/module.js",
+    "migrate": "yarn typeorm migration:run",
+    "migrate:rollback": "yarn typeorm migration:revert",
+    "make:migration": "node scripts/make-migration.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^7.3.2",
+    "@nestjs/config": "^0.5.0",
+    "@nestjs/core": "^7.3.2",
+    "@nestjs/platform-express": "^7.3.2",
+    "@nestjs/schedule": "^0.4.0",
+    "@nestjs/typeorm": "^7.1.0",
+    "cross-env": "^7.0.3",
+    "dotenv-flow": "^3.2.0",
+    "got": "^11.8.2",
+    "luxon": "^2.0.2",
+    "mysql2": "^2.3.2",
+    "nestjs-telegraf": "^2.4.0",
+    "rss-parser": "^3.12.0",
+    "rxjs": "^6.6.7",
+    "reflect-metadata": "^0.1.13",
+    "telegraf": "^4.4.2",
+    "ts-node": "^8.8.2",
+    "tsconfig-paths": "^3.9.0",
+    "typegram": "^3.4.3",
+    "typeorm": "^0.2.38"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^8.1.4",
+    "@types/express": "^4.17.7",
+    "@types/klaw": "^3.0.2",
+    "@types/luxon": "^2.0.5",
+    "@types/node": "^14.0.0",
+    "@types/node-telegram-bot-api": "^0.53.1",
+    "@typescript-eslint/eslint-plugin": "^4.14.1",
+    "@typescript-eslint/parser": "^4.14.1",
+    "eslint": "^7.18.0",
+    "eslint-config-airbnb-typescript": "^12.0.0",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-modules-newline": "^0.0.6",
+    "eslint-plugin-unicorn": "^30.0.0",
+    "fs-extra": "^10.0.0",
+    "husky": "^4.2.5",
+    "klaw": "^4.0.1",
+    "pluralize": "^8.0.0",
+    "rimraf": "^3.0.2",
+    "tscpaths": "^0.0.9",
+    "typescript": "^4.2.4"
+  }
+}
