@@ -17,6 +17,7 @@ import {
   Update as TypegramUpdate,
 } from 'typegram';
 
+import { sleep } from '~/common/utils/utils';
 import { Subscription } from '~/modules/subscriptions/entities';
 import { SubscriptionsService } from '~/modules/subscriptions/services';
 import { Action } from '~/modules/subscriptions/types';
@@ -48,12 +49,17 @@ export class SubscriptionsUpdate {
     if (!context.chat?.id) return;
 
     try {
-      const message = await this.getSubscriptions(context.chat.id);
-      await context.reply(message);
+      const subscriptionsMessages = await this.getSubscriptions(context.chat.id);
+      await context.reply('Список авторов, на которых вы подписаны:');
+      for (let i = 0; i < subscriptionsMessages.length; ++i) {
+        await context.reply(subscriptionsMessages[i].join('\n'));
+        await sleep(500);
+      }
     } catch (error) {
       if (error instanceof NotFoundException) {
         await context.reply('Вы ещё не подписаны ни на одного автора.');
       }
+      throw error;
     }
   }
 
@@ -71,8 +77,11 @@ export class SubscriptionsUpdate {
 
     this.actionsMemory[context.chat.id] = Action.REMOVE_SUBSCRIPTION;
     try {
-      const subscriptionsMessage = await this.getSubscriptions(context.chat.id);
-      await context.reply(subscriptionsMessage);
+      const subscriptionsMessages = await this.getSubscriptions(context.chat.id);
+      for (let i = 0; i < subscriptionsMessages.length; ++i) {
+        await context.reply(subscriptionsMessages[i].join('\n'));
+        await sleep(500);
+      }
       await context.reply('Введите идентификатор или номер из списка автора, от которого вы хотите отписаться.');
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -100,18 +109,24 @@ export class SubscriptionsUpdate {
     }
   }
 
-  async getSubscriptions(chatId: number): Promise<string> {
+  async getSubscriptions(chatId: number): Promise<string[][]> {
     const subscriptions = await this.subscriptionsService.getSubscriptions(chatId);
     if (subscriptions.length === 0) {
       throw new NotFoundException();
     } else {
-      let message = 'Список авторов, на которых вы подписаны:\n\n';
+      const perChunk = 100;
+      return subscriptions.reduce<string[][]>((resultArray, item, index) => {
+        const chunkIndex = Math.floor(index / perChunk);
 
-      subscriptions.forEach((subscription, i) => {
-        message += `${i + 1}. ${subscription.author}\n`;
-      });
+        if (!resultArray[chunkIndex]) {
+          // eslint-disable-next-line no-param-reassign
+          resultArray[chunkIndex] = []; // start a new chunk
+        }
 
-      return message;
+        resultArray[chunkIndex].push(`${index + 1}. ${item.author}`);
+
+        return resultArray;
+      }, []);
     }
   }
 
